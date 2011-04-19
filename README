@@ -1,0 +1,43 @@
+portping
+--------
+
+This repository contains various versions of a tool for checking the
+connectivity of a host via a given port.
+
+All code in this repository is licensed under a Creative Commons Attribution 3.0
+Unported License. http://creativecommons.org/licenses/by/3.0/
+
+A bit of history...
+Some time in the early 00s I needed a way of testing whether hosts were
+reachable via a given TCP port. Telnet functioned as a poor man's way of doing
+this, but I found I needed more and more functionality and at some point telnet
+just wasn't cutting it any more. I had a browse around the interwebs and
+couldn't find anything at the time that fulfilled my requirements:
+ - Very small executable
+ - Command-line based
+ - Capable of checking TCP and UDP connectivity
+ - Usable for measuring connection latencies
+
+I hacked something together myself, which worked well, but was lost to the sands
+of time at some point. Since then I've been in various situations where I've
+needed the tool again and (because of intellectual property issues or
+platform/architecture/OS requirements) I've always had to rewrite it from
+scratch.
+
+In doing so, I realised that writing this tool is actually quite a good
+quickstart exercise for learning a new language. You have to learn how to parse
+command line arguments, branches, loops, exceptions, timing and some basic
+networking, among other things. Since realising this, I've regularly rewritten
+this tool when learning a new language for my own education.
+
+This repository is an attempt to collect all the various versions of this tool
+I've written over the years that aren't implicitly encumbered by a proprietary
+licence.
+
+TODO:
+ - Locate Ruby and other versions
+ - Cleanup bitrotted C code (including OS-independence; looks like Windows-only
+   currently)
+ - Cleanup Haskell and add comments
+ - Fix the C indentation (wtf happened there...?)
+ - UDP support!
