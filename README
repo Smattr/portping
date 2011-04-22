@@ -36,7 +36,5 @@ licence.
 
 TODO:
  - Locate Ruby and other versions
- - Cleanup bitrotted C code (including OS-independence; looks like Windows-only
-   currently)
  - Cleanup Haskell and add comments
  - UDP support!

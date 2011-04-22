@@ -1,8 +1,9 @@
 /*
     User: Matthew Fernandez
     Date: 11:29 AM 26/11/2009
-    
-    Creates a base TCP connection to a specified server and port to verify connectivity.
+
+    Creates a base TCP connection to a specified server and port to verify
+    connectivity.
 */
 
 #ifdef _WIN32
@@ -50,43 +51,38 @@ int main(int argc, char **argv)
     struct timeval tock;
     int result;
     long elapsed;
-    
-    if (argc < 3)
-    {
-        fprintf(stderr,"usage %s hostname port", argv[0]);
+
+    if (argc < 3) {
+        fprintf(stderr,"Usage: %s hostname port\n", argv[0]);
         return 0;
     }
 
     portno = atoi(argv[2]);
-    if (portno == 0)
-    {
-        fprintf(stderr, "Invalid port number\n");
+    if (!portno) {
+        fprintf(stderr, "Invalid port number.\n");
         return 0;
     }
-    
+
     if (init()) {
         perror("Error during initialisation");
         return 1;
     }
 
-    do
-    {
+    do {
         sockfd = socket(AF_INET, SOCK_STREAM, 0);
-        if (sockfd < 0)
-        {
+        if (sockfd < 0) {
             perror("Error opening socket");
             cleanup();
-            return 0;
+            return 1;
         }
-        
+
         server = gethostbyname(argv[1]);
-        if (server == NULL)
-        {
-            perror("Error: no such host");
+        if (!server) {
+            perror("DNS lookup failed");
             cleanup();
-            return 0;
+            return 1;
         }
-        
+
         gettimeofday(&tick, 0);
         memset(&serv_addr, 0, sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
@@ -95,7 +91,7 @@ int main(int argc, char **argv)
         result = connect(sockfd, &serv_addr, sizeof(serv_addr));
         gettimeofday(&tock, 0);
         elapsed = (tock.tv_sec - tick.tv_sec) * 1000 + (tock.tv_usec - tick.tv_usec) / 1000;
-        
+
         if (result < 0) 
             fprintf(stderr, "Connection failed (time=%lums)\n", elapsed);
         else
@@ -105,9 +101,8 @@ int main(int argc, char **argv)
 #else
         close(sockfd);
 #endif
-    }
-    while (argc >= 4 && strcmp(argv[3], "-t") == 0);
-    
+    } while (argc >= 4 && !strcmp(argv[3], "-t"));
+
     cleanup();
     return 0;
 }
