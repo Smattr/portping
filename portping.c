@@ -162,6 +162,7 @@ int main(int argc, char **argv)
 #else
         close(sockfd);
 #endif
+        sleep(1);
     } while ((argc >= 4 && !strcmp(argv[3], "-t")) ||
              (argc >= 5 && !strcmp(argv[4], "-t")));
     /* FIXME: Proper arg handling. */
