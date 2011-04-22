@@ -22,6 +22,8 @@
 #include <string.h>
 #include <sys/time.h>
 
+#define BUFLEN 10
+
 static inline int init(void) {
 #ifdef _WIN32
     WORD wVersionRequested;
@@ -46,11 +48,13 @@ int main(int argc, char **argv)
 {
     int sockfd, portno;
     struct sockaddr_in serv_addr;
-    struct hostent *server;
+    struct hostent* server;
     struct timeval tick;
     struct timeval tock;
+    char buffer[BUFLEN];
     int result;
     long elapsed;
+    int protocol;
 
     if (argc < 3) {
         fprintf(stderr,"Usage: %s hostname port\n", argv[0]);
@@ -68,8 +72,14 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    if ((argc > 3) && !strcmp(argv[3], "udp"))
+        protocol = SOCK_DGRAM;
+    else
+        protocol = SOCK_STREAM;
+
     do {
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        sockfd = socket(AF_INET, protocol, 0);
+
         if (sockfd < 0) {
             perror("Error opening socket");
             cleanup();
@@ -88,7 +98,14 @@ int main(int argc, char **argv)
         serv_addr.sin_family = AF_INET;
         memmove(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
         serv_addr.sin_port = htons(portno);
-        result = connect(sockfd, &serv_addr, sizeof(serv_addr));
+        if (protocol == SOCK_STREAM)
+            result = connect(sockfd, &serv_addr, sizeof(serv_addr));
+        else {
+            result = sendto(sockfd, 0, 0, 0, &serv_addr, sizeof(serv_addr));
+            if (!result)
+                result = recvfrom(sockfd, buffer, BUFLEN, 0, &serv_addr,
+                                   sizeof(serv_addr));
+        }
         gettimeofday(&tock, 0);
         elapsed = (tock.tv_sec - tick.tv_sec) * 1000 + (tock.tv_usec - tick.tv_usec) / 1000;
 
@@ -101,7 +118,9 @@ int main(int argc, char **argv)
 #else
         close(sockfd);
 #endif
-    } while (argc >= 4 && !strcmp(argv[3], "-t"));
+    } while ((argc >= 4 && !strcmp(argv[3], "-t")) ||
+             (argc >= 5 && !strcmp(argv[4], "-t")));
+    /* FIXME: Proper arg handling. */
 
     cleanup();
     return 0;
