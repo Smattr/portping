@@ -1,10 +1,4 @@
-/*
-    User: Matthew Fernandez
-    Date: 11:29 AM 26/11/2009
-
-    Creates a base TCP connection to a specified server and port to verify
-    connectivity.
-*/
+/* Tests the connectivity of a host via TCP or UDP. */
 
 #ifdef _WIN32
     /* You'll need to pass the switch -lws2_32 to gcc for the Winsock components
@@ -16,13 +10,19 @@
 #else
     #include <netinet/in.h>
     #include <netdb.h>
+    #include <sys/types.h>
+    #include <sys/socket.h>
 #endif
 
+#include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <errno.h>
 
-#define BUFLEN 10
+#define SOCKET_TIMEOUT 10 /* seconds */
 
 static inline int init(void) {
 #ifdef _WIN32
@@ -44,6 +44,20 @@ static inline void cleanup(void) {
 #endif
 }
 
+/* Return 1 if the socket becomes ready for reading or writing during the
+ * defined timeout value.
+ */
+int ready(int socket) {
+    fd_set readfds, writefds;
+    struct timeval timeout = { .tv_sec = SOCKET_TIMEOUT, .tv_usec = 0 };
+
+    FD_ZERO(&readfds);
+    FD_ZERO(&writefds);
+    FD_SET(socket, &readfds);
+    FD_SET(socket, &writefds);
+    return select(socket + 1, &readfds, &writefds, (fd_set*)0, &timeout);
+}
+
 int main(int argc, char **argv)
 {
     int sockfd, portno;
@@ -51,7 +65,6 @@ int main(int argc, char **argv)
     struct hostent* server;
     struct timeval tick;
     struct timeval tock;
-    char buffer[BUFLEN];
     int result;
     long elapsed;
     int protocol;
@@ -86,6 +99,15 @@ int main(int argc, char **argv)
             return 1;
         }
 
+        /* Set the socket to non-blocking. */
+        result = fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) | O_NONBLOCK);
+        if (result < 0) {
+            perror("Error setting socket to non-blocking");
+            cleanup();
+            return 1;
+        }
+
+        /* Lookup the provided host. */
         server = gethostbyname(argv[1]);
         if (!server) {
             perror("DNS lookup failed");
@@ -98,21 +120,43 @@ int main(int argc, char **argv)
         serv_addr.sin_family = AF_INET;
         memmove(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
         serv_addr.sin_port = htons(portno);
-        if (protocol == SOCK_STREAM)
-            result = connect(sockfd, &serv_addr, sizeof(serv_addr));
-        else {
+
+        if (protocol == SOCK_STREAM) { /* TCP */
+            connect(sockfd, &serv_addr, sizeof(serv_addr));
+
+            /* The socket will only become ready if the connection succeeds. */
+            result = ready(sockfd) - 1;
+        } else { /* UDP */
+            connect(sockfd, &serv_addr, sizeof(serv_addr));
+
+            /* Sending to a closed UDP socket generates an error condition that
+             * triggers on the next syscall with the socket. The error code
+             * after this allows us to determine the status of the socket. This
+             * method can generate false positives.
+             */
+            sendto(sockfd, 0, 0, 0, &serv_addr, sizeof(serv_addr));
             result = sendto(sockfd, 0, 0, 0, &serv_addr, sizeof(serv_addr));
-            if (!result)
-                result = recvfrom(sockfd, buffer, BUFLEN, 0, &serv_addr,
-                                   sizeof(serv_addr));
+            if (errno == ECONNREFUSED)
+                /* This will happen on ICMP error indicating a blocked port. */
+                result = 1;
         }
+
         gettimeofday(&tock, 0);
         elapsed = (tock.tv_sec - tick.tv_sec) * 1000 + (tock.tv_usec - tick.tv_usec) / 1000;
 
-        if (result < 0) 
-            fprintf(stderr, "Connection failed (time=%lums)\n", elapsed);
-        else
-            printf("Response from %s:%s (time=%lums)\n", argv[1], argv[2], elapsed);
+        switch(result) {
+            case -1:
+                printf("No response from");
+                break;
+            case 0:
+                printf("Response from");
+                break;
+            default:
+                printf("Connection blocked by");
+                break;
+        }
+        printf(" %s:%s (time=%lums)\n", argv[1], argv[2], elapsed);
+
 #ifdef _WIN32
         closesocket(sockfd);
 #else
