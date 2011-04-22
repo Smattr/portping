@@ -39,5 +39,4 @@ TODO:
  - Cleanup bitrotted C code (including OS-independence; looks like Windows-only
    currently)
  - Cleanup Haskell and add comments
- - Fix the C indentation (wtf happened there...?)
  - UDP support!
