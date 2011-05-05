@@ -70,7 +70,7 @@ int main(int argc, char **argv)
     int protocol;
 
     if (argc < 3) {
-        fprintf(stderr,"Usage: %s hostname port\n", argv[0]);
+        fprintf(stderr,"Usage: %s hostname port [protocol]\n", argv[0]);
         return 0;
     }
 
