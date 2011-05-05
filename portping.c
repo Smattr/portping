@@ -1,4 +1,9 @@
-/* Tests the connectivity of a host via TCP or UDP. */
+/* Tests the connectivity of a host via TCP or UDP.
+ *
+ * Parts of the Windows branches of this code were committed by Daniel Housar:
+ *  https://github.com/danielhousar/
+ *  daniel.h.080490.cs@gmail.com
+ */
 
 #ifdef _WIN32
     /* You'll need to pass the switch -lws2_32 to gcc for the Winsock components
