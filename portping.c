@@ -100,7 +100,13 @@ int main(int argc, char **argv)
         }
 
         /* Set the socket to non-blocking. */
+#ifdef _WIN32
+        /* Cheat and reuse elapsed because we need a temporary long value. */
+        elapsed = 1;
+        result = ioctlsocket(sockfd, FIONBIO, &elapsed);
+#else
         result = fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) | O_NONBLOCK);
+#endif
         if (result < 0) {
             perror("Error setting socket to non-blocking");
             cleanup();
@@ -136,7 +142,11 @@ int main(int argc, char **argv)
              */
             sendto(sockfd, 0, 0, 0, &serv_addr, sizeof(serv_addr));
             result = sendto(sockfd, 0, 0, 0, &serv_addr, sizeof(serv_addr));
+#ifdef _WIN32
+            if (errno == WSAECONNREFUSED)
+#else
             if (errno == ECONNREFUSED)
+#endif
                 /* This will happen on ICMP error indicating a blocked port. */
                 result = 1;
         }
@@ -159,10 +169,11 @@ int main(int argc, char **argv)
 
 #ifdef _WIN32
         closesocket(sockfd);
+        Sleep(1);
 #else
         close(sockfd);
-#endif
         sleep(1);
+#endif
     } while ((argc >= 4 && !strcmp(argv[3], "-t")) ||
              (argc >= 5 && !strcmp(argv[4], "-t")));
     /* FIXME: Proper arg handling. */
