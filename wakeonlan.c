@@ -2,9 +2,6 @@
  * Wake-on-LAN is a protocol that allows you to bootup a computer from a
  * powered off state by sending it a "magic packet". This program allows you
  * to send magic packets to a given host.
- *
- * FIXME: The mac_to_bytes function was hastily written and doesn't work.
- * TODO: Better commenting.
  */
 
 #include <stdio.h>
@@ -20,9 +17,11 @@
 #define PREFIX_DATA ((unsigned char)0xff)
 #define PREFIX_LEN  6
 
-/* Following these 6 bytes is the destination's MAC address repeated 16
- * times.
+/* Following this is the destination's MAC address represented as 6 bytes.
  */
+#define MAC_BYTES       6
+
+/* The address is repeated 16 times. */
 #define MAC_REPETITIONS 16
 
 /* Technically you can send a magic packet to any port, but 7 (IANA-defined
@@ -31,28 +30,26 @@
  */
 #define DESTINATION_PORT 9
 
-/* A MAC address should be xx:xx:xx:xx:xx:xx where x are hex values. */
-#define MAC_CHARACTERS 12
-#define MAC_BYTES       6
-
 /* The length of the magic packet payload. */
 #define BUFFER_LEN (PREFIX_LEN + MAC_BYTES * MAC_REPETITIONS)
 
-unsigned char char_to_hex(char c) {
+/* Converts a hex character to its numerical representation. */
+unsigned char char_to_num(char c) {
     if (c >= '0' && c <= '9') return c - '0';
     if (c >= 'a' && c <= 'f') return c - 'a' + 10;
     if (c >= 'A' && c <= 'F') return c - 'A' + 10;
     return 0;
 }
 
+/* Convert a textual MAC address into a byte representation. */
 void mac_to_bytes(unsigned char* out, char* mac) {
-    int i;
+    unsigned int i;
 
     for (i = 0; i < MAC_BYTES; ++i, ++mac) {
         if (*mac != '\0')
-            *(out + i) = char_to_hex(*mac++) << 4;
+            *(out + i) = char_to_num(*mac++) << 4;
         if (*mac != '\0')
-            *(out + i) |= char_to_hex(*mac++);
+            *(out + i) |= char_to_num(*mac++);
         if (*mac != '\0' && *mac != ':')
             return;
     }
@@ -61,7 +58,7 @@ void mac_to_bytes(unsigned char* out, char* mac) {
 int main(int argc, char** argv) {
     unsigned char mac[MAC_BYTES];
     unsigned char buffer[BUFFER_LEN];
-    int i;
+    unsigned int i;
     int sockfd;
     struct sockaddr_in dest;
     struct hostent* dest_addr;
@@ -73,8 +70,6 @@ int main(int argc, char** argv) {
 
     /* Convert the textual MAC address to a byte array. */
     mac_to_bytes(mac, argv[2]);
-    for (i = 0; i < MAC_BYTES * 2; ++i)
-        printf("%x\n", i % 2 ? mac[i] >> 4 : mac[i] & 0xf);
 
     /* Construct the payload of the magic packet. */
     memset(buffer, PREFIX_DATA, PREFIX_LEN);
@@ -112,19 +107,9 @@ int main(int argc, char** argv) {
     /* We're ready to send the packet. Note that there will be no response
      * regardless of whether the destination received the packet.
      */
-    sendto(sockfd, buffer, BUFFER_LEN, 0, &dest, sizeof(dest));
+    sendto(sockfd, buffer, BUFFER_LEN, 0, (struct sockaddr*)&dest,
+           sizeof(dest));
 
     close(sockfd);
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
-
