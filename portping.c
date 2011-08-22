@@ -5,8 +5,8 @@
  *  daniel.h.080490.cs@gmail.com
  *
  * This code doesn't follow 'C90' (ANSI C) standard, so make sure,
- * that C++ or 'C99' standard capable compiler is used.
- * Recent 'Microsoft MSVC', 'Intel ICC' and 'GNU GCC' should be.
+ * that C++ or 'C99' standard capable compiler is used,
+ * for example recent 'Microsoft MSVC', 'Intel ICC' or 'GNU GCC'.
  */
 
 #ifdef _WIN32
