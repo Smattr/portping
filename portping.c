@@ -3,6 +3,10 @@
  * Parts of the Windows branches of this code were committed by Daniel Housar:
  *  https://github.com/danielhousar/
  *  daniel.h.080490.cs@gmail.com
+ *
+ * This code doesn't follow 'C90' (ANSI C) standard, so make sure,
+ * that C++ or 'C99' standard capable compiler is used.
+ * Recent 'Microsoft MSVC', 'Intel ICC' and 'GNU GCC' should be.
  */
 
 #ifdef _WIN32
@@ -28,6 +32,24 @@
 #include <errno.h>
 
 #define SOCKET_TIMEOUT 10 /* seconds */
+
+/*
+ * c_is_portno_pp() is called during while cycle at main() start.
+ * It cheks if given arg represents port number.
+ */
+int s_is_portno_pp(char* s){
+	int i = 0;
+	int err_nu = 0;
+
+	while (s && s[i] != 0 && !err_nu){
+		/* these 48 and 57 set ASCII chars range (from '0' to '9')*/
+		if (s[i] < 48 || s[i] > 57) { err_nu++; }
+		i++;
+	}
+
+	if (err_nu == 0) return 1;
+	else return 0;
+}
 
 static inline int init(void) {
 #ifdef _WIN32
@@ -65,7 +87,8 @@ int ready(int socket) {
 
 int main(int argc, char **argv)
 {
-    int sockfd, portno;
+    int sockfd;
+    int portno = 0;
     struct sockaddr_in serv_addr;
     struct hostent* server;
     struct timeval tick;
@@ -73,15 +96,27 @@ int main(int argc, char **argv)
     int result;
     long elapsed;
     int protocol;
+	char loop = 0;
+	char udp = 0;
+	int i = 0;
+
+/* args processing */
+	while (i < argc) {
+		if (!strcmp(argv[i], "-t")) { loop = 1; }
+		if (s_is_portno_pp(argv[i])) { portno = atoi(argv[i]); }
+		if (!strcmp(argv[i], "udp")) { udp = 1; }
+		i++;
+	}
 
     if (argc < 3) {
-        fprintf(stderr,"Usage: %s hostname port [protocol]\n", argv[0]);
+		printf("Usage: %s hostname port [-t] [udp]\n\n", argv[0]);
+		printf("\t-t \tLoop ping given host and port\n"
+		"\tudp \tSwitch to UDP (TCP is by default)\n");
         return 0;
     }
 
-    portno = atoi(argv[2]);
     if (!portno) {
-        fprintf(stderr, "Invalid port number.\n");
+        fprintf(stderr, "Invalid port number or port number not given.\n");
         return 0;
     }
 
@@ -90,7 +125,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    if ((argc > 3) && !strcmp(argv[3], "udp"))
+    if (udp)
         protocol = SOCK_DGRAM;
     else
         protocol = SOCK_STREAM;
@@ -133,20 +168,20 @@ int main(int argc, char **argv)
         serv_addr.sin_port = htons(portno);
 
         if (protocol == SOCK_STREAM) { /* TCP */
-            connect(sockfd, &serv_addr, sizeof(serv_addr));
+            connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
             /* The socket will only become ready if the connection succeeds. */
             result = ready(sockfd) - 1;
         } else { /* UDP */
-            connect(sockfd, &serv_addr, sizeof(serv_addr));
+            connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 
             /* Sending to a closed UDP socket generates an error condition that
              * triggers on the next syscall with the socket. The error code
              * after this allows us to determine the status of the socket. This
              * method can generate false positives.
              */
-            sendto(sockfd, 0, 0, 0, &serv_addr, sizeof(serv_addr));
-            result = sendto(sockfd, 0, 0, 0, &serv_addr, sizeof(serv_addr));
+            sendto(sockfd, 0, 0, 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+            result = sendto(sockfd, 0, 0, 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
 #ifdef _WIN32
             if (errno == WSAECONNREFUSED)
 #else
@@ -179,9 +214,7 @@ int main(int argc, char **argv)
         close(sockfd);
         sleep(1);
 #endif
-    } while ((argc >= 4 && !strcmp(argv[3], "-t")) ||
-             (argc >= 5 && !strcmp(argv[4], "-t")));
-    /* FIXME: Proper arg handling. */
+    } while (loop == 1);
 
     cleanup();
     return 0;
