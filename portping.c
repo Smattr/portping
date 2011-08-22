@@ -46,30 +46,21 @@ int s_is_portno_pp(char* s){
 		if (s[i] < 48 || s[i] > 57) { err_nu++; }
 		i++;
 	}
+	/* returns 0 if given string is number */
+	return err_nu;
 
-	if (err_nu == 0) return 1;
-	else return 0;
 }
 
-static inline int init(void) {
 #ifdef _WIN32
+static inline int pp_wsa_init(void) {
     WORD wVersionRequested;
     WSADATA wsaData;
 
     /* Initialise Winsock. */
     wVersionRequested = MAKEWORD(1, 0);
     return WSAStartup(wVersionRequested, &wsaData);
-#else
-    return 0;
-#endif
 }
-
-static inline void cleanup(void) {
-#ifdef _WIN32
-    /* Unload Winsock resources. */
-    WSACleanup();
 #endif
-}
 
 /* Return 1 if the socket becomes ready for reading or writing during the
  * defined timeout value.
@@ -103,7 +94,7 @@ int main(int argc, char **argv)
 /* args processing */
 	while (i < argc) {
 		if (!strcmp(argv[i], "-t")) { loop = 1; }
-		if (s_is_portno_pp(argv[i])) { portno = atoi(argv[i]); }
+		if (!s_is_portno_pp(argv[i])) { portno = atoi(argv[i]); }
 		if (!strcmp(argv[i], "udp")) { udp = 1; }
 		i++;
 	}
@@ -120,10 +111,12 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    if (init()) {
+#ifdef _WIN32
+    if (pp_wsa_init()) {
         perror("Error during initialisation");
         return 1;
     }
+#endif
 
     if (udp)
         protocol = SOCK_DGRAM;
@@ -135,7 +128,10 @@ int main(int argc, char **argv)
 
         if (sockfd < 0) {
             perror("Error opening socket");
-            cleanup();
+#ifdef _WIN32
+			/* Unload Winsock resources. */
+    		WSACleanup();
+#endif
             return 1;
         }
 
@@ -147,9 +143,13 @@ int main(int argc, char **argv)
 #else
         result = fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) | O_NONBLOCK);
 #endif
+
         if (result < 0) {
             perror("Error setting socket to non-blocking");
-            cleanup();
+#ifdef _WIN32
+			/* Unload Winsock resources. */
+    		WSACleanup();
+#endif
             return 1;
         }
 
@@ -157,7 +157,9 @@ int main(int argc, char **argv)
         server = gethostbyname(argv[1]);
         if (!server) {
             perror("DNS lookup failed");
-            cleanup();
+#ifdef _WIN32
+    		WSACleanup();
+#endif
             return 1;
         }
 
@@ -216,7 +218,11 @@ int main(int argc, char **argv)
 #endif
     } while (loop == 1);
 
-    cleanup();
+#ifdef _WIN32
+    /* Unload Winsock resources. */
+    WSACleanup();
+#endif
+
     return 0;
 }
 
