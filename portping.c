@@ -43,6 +43,7 @@ int s_is_portno_pp(char* s){
 	return err_nu;
 }
 
+#ifdef _WIN32
 static __inline int pp_wsa_init(void) {
     WORD wVersionRequested;
     WSADATA wsaData;
@@ -51,6 +52,7 @@ static __inline int pp_wsa_init(void) {
     wVersionRequested = MAKEWORD(1, 0);
     return WSAStartup(wVersionRequested, &wsaData);
 }
+#endif
 
 /* Returns 1 if the socket becomes ready for reading or writing during the
  * defined timeout value.
