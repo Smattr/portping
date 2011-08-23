@@ -1,12 +1,5 @@
 /* Tests the connectivity of a host via TCP or UDP.
  *
- * Parts of the Windows branches of this code were committed by Daniel Housar:
- *  https://github.com/danielhousar/
- *  daniel.h.080490.cs@gmail.com
- *
- * This code doesn't follow 'C90' (ANSI C) standard, so make sure,
- * that C++ or 'C99' standard capable compiler is used,
- * for example recent 'Microsoft MSVC', 'Intel ICC' or 'GNU GCC'.
  */
 
 #ifdef _WIN32
@@ -36,19 +29,17 @@
 /*
  * c_is_portno_pp() is called during while cycle at main() start.
  * It cheks if given arg represents port number.
+ * Returns 0 if given string is number.
  */
 int s_is_portno_pp(char* s){
 	int i = 0;
 	int err_nu = 0;
 
-	while (s && s[i] != 0 && !err_nu){
-		/* these 48 and 57 set ASCII chars range (from '0' to '9')*/
+	while (s && s[i] != 0 && !err_nu) {
 		if (s[i] < 48 || s[i] > 57) { err_nu++; }
 		i++;
 	}
-	/* returns 0 if given string is number */
 	return err_nu;
-
 }
 
 #ifdef _WIN32
@@ -62,12 +53,15 @@ static inline int pp_wsa_init(void) {
 }
 #endif
 
-/* Return 1 if the socket becomes ready for reading or writing during the
+/* Returns 1 if the socket becomes ready for reading or writing during the
  * defined timeout value.
  */
 int ready(int socket) {
     fd_set readfds, writefds;
-    struct timeval timeout = { .tv_sec = SOCKET_TIMEOUT, .tv_usec = 0 };
+    /* struct timeval timeout = { .tv_sec = SOCKET_TIMEOUT, .tv_usec = 0 }; */
+	struct timeval timeout;
+	timeout.tv_sec = SOCKET_TIMEOUT;
+	timeout.tv_usec = 0;
 
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
@@ -100,8 +94,8 @@ int main(int argc, char **argv)
 	}
 
     if (argc < 3) {
-		printf("Usage: %s hostname port [-t] [udp]\n\n", argv[0]);
-		printf("\t-t \tLoop ping given host and port\n"
+		fprintf(stderr, "Usage: %s hostname port [-t] [udp]\n\n", argv[0]);
+		fprintf(stderr, "\t-t \tLoop ping given host and port\n"
 		"\tudp \tSwitch to UDP (TCP is by default)\n");
         return 0;
     }
@@ -166,7 +160,7 @@ int main(int argc, char **argv)
         gettimeofday(&tick, 0);
         memset(&serv_addr, 0, sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
-        memmove(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
+        memmove(&serv_addr.sin_addr.s_addr, server->h_addr_list[0], server->h_length);
         serv_addr.sin_port = htons(portno);
 
         if (protocol == SOCK_STREAM) { /* TCP */
@@ -216,7 +210,7 @@ int main(int argc, char **argv)
         close(sockfd);
         sleep(1);
 #endif
-    } while (loop == 1);
+    } while (loop);
 
 #ifdef _WIN32
     /* Unload Winsock resources. */
