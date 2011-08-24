@@ -9,6 +9,7 @@
     #include <winsock2.h>
     #include <ws2tcpip.h>
     #include <windows.h>
+	#include <time.h>
 #else
     #include <netinet/in.h>
     #include <netdb.h>
@@ -16,10 +17,11 @@
     #include <sys/socket.h>
 #endif
 
-#include <unistd.h>
+//#include <unistd.h>
+//#include <sys/time.h>
+
 #include <stdio.h>
 #include <string.h>
-#include <sys/time.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -42,8 +44,7 @@ int s_is_portno_pp(char* s){
 	return err_nu;
 }
 
-#ifdef _WIN32
-static inline int pp_wsa_init(void) {
+static __inline int pp_wsa_init(void) {
     WORD wVersionRequested;
     WSADATA wsaData;
 
@@ -51,7 +52,6 @@ static inline int pp_wsa_init(void) {
     wVersionRequested = MAKEWORD(1, 0);
     return WSAStartup(wVersionRequested, &wsaData);
 }
-#endif
 
 /* Returns 1 if the socket becomes ready for reading or writing during the
  * defined timeout value.
@@ -72,14 +72,20 @@ int ready(int socket) {
 
 int main(int argc, char **argv)
 {
+#ifdef _WIN32
+	u_long elapsed;
+	struct _SYSTEMTIME ppst1;
+	struct _SYSTEMTIME ppst2;
+#else
+	long elapsed;
+	struct timeval tick;
+    struct timeval tock;
+#endif
     int sockfd;
     int portno = 0;
     struct sockaddr_in serv_addr;
-    struct hostent* server;
-    struct timeval tick;
-    struct timeval tock;
+    struct hostent *server;
     int result;
-    long elapsed;
     int protocol;
 	char loop = 0;
 	char udp = 0;
@@ -156,8 +162,11 @@ int main(int argc, char **argv)
 #endif
             return 1;
         }
-
+#ifdef _WIN32
+		GetSystemTime(&ppst1);
+#else
         gettimeofday(&tick, 0);
+#endif
         memset(&serv_addr, 0, sizeof(serv_addr));
         serv_addr.sin_family = AF_INET;
         memmove(&serv_addr.sin_addr.s_addr, server->h_addr_list[0], server->h_length);
@@ -187,8 +196,14 @@ int main(int argc, char **argv)
                 result = 1;
         }
 
+#ifdef _WIN32
+		GetSystemTime(&ppst2);
+		elapsed = (ppst2.wSecond - ppst1.wSecond) * 1000 + (ppst2.wMilliseconds - ppst1.wMilliseconds);
+#else
         gettimeofday(&tock, 0);
-        elapsed = (tock.tv_sec - tick.tv_sec) * 1000 + (tock.tv_usec - tick.tv_usec) / 1000;
+		elapsed = (tock.tv_sec - tick.tv_sec) * 1000 + (tock.tv_usec - tick.tv_usec) / 1000;
+#endif
+        
 
         switch(result) {
             case -1:
