@@ -11,14 +11,13 @@
     #include <windows.h>
 	#include <time.h>
 #else
-    #include <netinet/in.h>
-    #include <netdb.h>
-    #include <sys/types.h>
-    #include <sys/socket.h>
+	#include <netinet/in.h>
+	#include <netdb.h>
+	#include <sys/types.h>
+	#include <sys/socket.h>
+	#include <sys/time.h>
+	#include <unistd.h>
 #endif
-
-//#include <unistd.h>
-//#include <sys/time.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -203,7 +202,7 @@ int main(int argc, char **argv)
         gettimeofday(&tock, 0);
 		elapsed = (tock.tv_sec - tick.tv_sec) * 1000 + (tock.tv_usec - tick.tv_usec) / 1000;
 #endif
-        
+
 
         switch(result) {
             case -1:
